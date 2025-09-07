@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Cover Letter - Job Tracker{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('job_detail', job_id=job.id) }}">{{ job.title or 'Job Details' }}</a></li>
+                <li class="breadcrumb-item active">Cover Letter</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2><i class="fas fa-envelope me-2"></i>AI Generated Cover Letter</h2>
+                <div>
+                    <span class="badge bg-info me-2">AI Generated</span>
+                    <button class="btn btn-sm btn-outline-primary" onclick="copyToClipboard()">
+                        <i class="fas fa-copy me-1"></i>Copy
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Generated for:</strong> {{ job.title }} at {{ job.company }}
+                </div>
+                
+                <div class="cover-letter-content" id="coverLetterContent" style="white-space: pre-wrap; font-family: 'Times New Roman', serif; line-height: 1.6; background: white; padding: 30px; border: 1px solid #ddd;">{{ cover_letter }}</div>
+                
+                <div class="mt-4">
+                    <a href="{{ url_for('job_detail', job_id=job.id) }}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Job
+                    </a>
+                    {% if letter_path %}
+                    <button class="btn btn-info" onclick="downloadCoverLetter()">
+                        <i class="fas fa-download me-2"></i>Download as Text
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyToClipboard() {
+    const content = document.getElementById('coverLetterContent').textContent;
+    navigator.clipboard.writeText(content).then(function() {
+        alert('Cover letter copied to clipboard!');
+    }).catch(function() {
+        alert('Failed to copy. Please select and copy manually.');
+    });
+}
+
+function downloadCoverLetter() {
+    const content = document.getElementById('coverLetterContent').textContent;
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'cover_letter_{{ job.company|replace(" ", "_") }}.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+</script>
+{% endblock %}

@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Company Research - {{ job.company }} - Job Tracker{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Dashboard</a></li>
+                <li class="breadcrumb-item"><a href="{{ url_for('job_detail', job_id=job.id) }}">{{ job.title or 'Job Details' }}</a></li>
+                <li class="breadcrumb-item active">Company Research</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h2><i class="fas fa-building me-2"></i>{{ job.company }}</h2>
+                <span class="badge bg-info">AI Generated</span>
+            </div>
+            <div class="card-body">
+                {% if research.overview %}
+                <div class="mb-4">
+                    <h5><i class="fas fa-info-circle me-2"></i>Company Overview</h5>
+                    <p>{{ research.overview }}</p>
+                </div>
+                {% endif %}
+
+                {% if research.culture %}
+                <div class="mb-4">
+                    <h5><i class="fas fa-users me-2"></i>Company Culture</h5>
+                    <p>{{ research.culture }}</p>
+                </div>
+                {% endif %}
+
+                {% if research.recent_news %}
+                <div class="mb-4">
+                    <h5><i class="fas fa-newspaper me-2"></i>Recent News & Developments</h5>
+                    <p>{{ research.recent_news }}</p>
+                </div>
+                {% endif %}
+
+                {% if research.interview_tips %}
+                <div class="mb-4">
+                    <h5><i class="fas fa-lightbulb me-2"></i>Interview Preparation Tips</h5>
+                    <p>{{ research.interview_tips }}</p>
+                </div>
+                {% endif %}
+
+                {% if research.questions_to_ask %}
+                <div class="mb-4">
+                    <h5><i class="fas fa-question-circle me-2"></i>Good Questions to Ask</h5>
+                    <p>{{ research.questions_to_ask }}</p>
+                </div>
+                {% endif %}
+
+                {% if research.key_talking_points %}
+                <div class="mb-4">
+                    <h5><i class="fas fa-key me-2"></i>Key Talking Points</h5>
+                    <p>{{ research.key_talking_points }}</p>
+                </div>
+                {% endif %}
+
+                <div class="mt-4">
+                    <a href="{{ url_for('job_detail', job_id=job.id) }}" class="btn btn-primary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Job Details
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

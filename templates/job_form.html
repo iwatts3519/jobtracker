@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block title %}Add Job - Job Tracker{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h2><i class="fas fa-plus-circle me-2"></i>Add New Job</h2>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="url" class="form-label">Job URL <span class="text-danger">*</span></label>
+                        <input type="url" class="form-control" id="url" name="url" required 
+                               placeholder="https://www.linkedin.com/jobs/view/123456789">
+                        <div class="form-text">Paste the job posting URL from LinkedIn, Indeed, or other job boards.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Job Title</label>
+                        <input type="text" class="form-control" id="title" name="title" 
+                               placeholder="Software Engineer">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="company" class="form-label">Company</label>
+                        <input type="text" class="form-control" id="company" name="company" 
+                               placeholder="Google">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="location" class="form-label">Location</label>
+                        <input type="text" class="form-control" id="location" name="location" 
+                               placeholder="San Francisco, CA">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Job Description</label>
+                        <textarea class="form-control" id="description" name="description" rows="5" 
+                                  placeholder="Paste the job description here..."></textarea>
+                        <div class="form-text">Copy and paste the job description to help with AI customization later.</div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>Save Job
+                            </button>
+                            <a href="{{ url_for('index') }}" class="btn btn-secondary ms-2">Cancel</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-lightbulb me-2"></i>Tips for Adding Jobs</h5>
+            </div>
+            <div class="card-body">
+                <ul class="mb-0">
+                    <li><strong>URL is required:</strong> The job URL helps track where you found the position.</li>
+                    <li><strong>Fill in details:</strong> While optional, adding title, company, and description helps with AI customization.</li>
+                    <li><strong>Job description:</strong> Copy the full job description for better CV customization results.</li>
+                    <li><strong>Organize later:</strong> Jobs are saved to "Saved" column by default - drag them to other columns as you progress.</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

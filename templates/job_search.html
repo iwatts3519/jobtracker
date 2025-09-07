@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Job Search - Job Tracker{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1><i class="fas fa-search me-2"></i>Job Search</h1>
+        <p class="text-muted">Search for jobs automatically using Indeed and other job boards</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-search me-2"></i>Search Jobs</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('search_jobs') }}">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="search_term" class="form-label">Job Title / Keywords <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="search_term" name="search_term" 
+                                       placeholder="Software Engineer" required>
+                                <div class="form-text">Enter job titles, skills, or keywords</div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="location" class="form-label">Location</label>
+                                <input type="text" class="form-control" id="location" name="location" 
+                                       placeholder="New York, NY">
+                                <div class="form-text">City, state, or "remote"</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="site" class="form-label">Job Board</label>
+                                <select class="form-select" id="site" name="site">
+                                    <option value="indeed">Indeed (Recommended)</option>
+                                    <option value="linkedin">LinkedIn</option>
+                                    <option value="zip_recruiter">ZipRecruiter</option>
+                                    <option value="glassdoor">Glassdoor</option>
+                                </select>
+                                <div class="form-text">Indeed typically has the best results</div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="results_wanted" class="form-label">Number of Results</label>
+                                <select class="form-select" id="results_wanted" name="results_wanted">
+                                    <option value="5">5 jobs</option>
+                                    <option value="10" selected>10 jobs</option>
+                                    <option value="20">20 jobs</option>
+                                    <option value="50">50 jobs</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-lg">
+                        <i class="fas fa-search me-2"></i>Search Jobs
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h6><i class="fas fa-info-circle me-2"></i>Search Tips</h6>
+            </div>
+            <div class="card-body">
+                <h6>For Best Results:</h6>
+                <ul>
+                    <li><strong>Be specific:</strong> Use exact job titles like "Senior Python Developer"</li>
+                    <li><strong>Include skills:</strong> Add relevant technologies or skills</li>
+                    <li><strong>Location matters:</strong> Include city/state or use "remote"</li>
+                    <li><strong>Try Indeed first:</strong> Usually has the most comprehensive results</li>
+                </ul>
+                
+                <hr>
+                
+                <h6>Example Searches:</h6>
+                <ul class="mb-0">
+                    <li>"Full Stack Developer" in "San Francisco, CA"</li>
+                    <li>"Data Scientist Python" in "remote"</li>
+                    <li>"Product Manager" in "New York, NY"</li>
+                    <li>"DevOps Engineer AWS" in "Seattle, WA"</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6><i class="fas fa-shield-alt me-2"></i>How It Works</h6>
+            </div>
+            <div class="card-body">
+                <ol class="mb-0">
+                    <li>Enter your search criteria</li>
+                    <li>Our system searches the job board</li>
+                    <li>Results are displayed with key details</li>
+                    <li>Click "Save Job" to add to your dashboard</li>
+                    <li>Organize and apply using the Kanban board</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <i class="fas fa-lightbulb me-2"></i>
+            <strong>Pro Tip:</strong> After searching and saving jobs, use the "Auto-fill Details" button on each job's detail page 
+            to automatically extract job descriptions for better AI customization results.
+        </div>
+    </div>
+</div>
+{% endblock %}
