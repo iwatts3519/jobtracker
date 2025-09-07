@@ -58,3 +58,53 @@ class Company(db.Model):
     
     def __repr__(self):
         return f'<Company {self.name}>'
+
+class JobNote(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    job_id = db.Column(db.Integer, db.ForeignKey('job.id'), nullable=False)
+    note_type = db.Column(db.String(50), default='general')  # general, interview, follow-up, contact
+    title = db.Column(db.String(200))
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationship
+    job = db.relationship('Job', backref=db.backref('notes', lazy=True, cascade='all, delete-orphan'))
+    
+    def __repr__(self):
+        return f'<JobNote {self.title} for Job {self.job_id}>'
+
+class FollowUp(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    job_id = db.Column(db.Integer, db.ForeignKey('job.id'), nullable=False)
+    reminder_date = db.Column(db.DateTime, nullable=False)
+    reminder_type = db.Column(db.String(50), default='follow-up')  # follow-up, interview, deadline
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    is_completed = db.Column(db.Boolean, default=False)
+    completed_at = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationship
+    job = db.relationship('Job', backref=db.backref('follow_ups', lazy=True, cascade='all, delete-orphan'))
+    
+    def __repr__(self):
+        return f'<FollowUp {self.title} for Job {self.job_id}>'
+
+class Contact(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    job_id = db.Column(db.Integer, db.ForeignKey('job.id'), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    role = db.Column(db.String(100))  # recruiter, hiring_manager, hr, etc.
+    email = db.Column(db.String(120))
+    phone = db.Column(db.String(20))
+    linkedin = db.Column(db.String(200))
+    notes = db.Column(db.Text)
+    last_contact = db.Column(db.DateTime)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationship
+    job = db.relationship('Job', backref=db.backref('contacts', lazy=True, cascade='all, delete-orphan'))
+    
+    def __repr__(self):
+        return f'<Contact {self.name} for Job {self.job_id}>'

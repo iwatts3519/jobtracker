@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
-from datetime import datetime
+from datetime import datetime, timedelta
+from sqlalchemy import func
 import os
 from dotenv import load_dotenv
 
@@ -12,7 +13,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = 'static/uploads'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
-from models import db, Job, User, Application, Company
+from models import db, Job, User, Application, Company, JobNote, FollowUp, Contact
 from services.ai_service import ai_service
 from services.job_scraper import job_scraper
 from services.cv_processor import cv_processor
@@ -322,6 +323,206 @@ def get_cv_text(filename):
         return jsonify({'success': True, 'cv_text': cv_text})
     else:
         return jsonify({'success': False, 'error': 'Could not extract CV text'})
+
+@app.route('/analytics')
+def analytics():
+    """Analytics dashboard with job search insights"""
+    return render_template('analytics.html')
+
+@app.route('/api/analytics/overview')
+def analytics_overview():
+    """Get overview analytics data"""
+    total_jobs = Job.query.count()
+    saved_count = Job.query.filter_by(status='saved').count()
+    applied_count = Job.query.filter_by(status='applied').count()
+    interview_count = Job.query.filter_by(status='interview').count()
+    offered_count = Job.query.filter_by(status='offered').count()
+    
+    # Success rate (offered/applied)
+    success_rate = (offered_count / applied_count * 100) if applied_count > 0 else 0
+    
+    # Interview rate (interview+offered/applied)
+    interview_rate = ((interview_count + offered_count) / applied_count * 100) if applied_count > 0 else 0
+    
+    return jsonify({
+        'total_jobs': total_jobs,
+        'status_counts': {
+            'saved': saved_count,
+            'applied': applied_count,
+            'interview': interview_count,
+            'offered': offered_count
+        },
+        'success_rate': round(success_rate, 1),
+        'interview_rate': round(interview_rate, 1)
+    })
+
+@app.route('/api/analytics/timeline')
+def analytics_timeline():
+    """Get timeline data for applications"""
+    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
+    
+    # Get applications per day for last 30 days
+    timeline_data = db.session.query(
+        func.date(Job.date_added).label('date'),
+        func.count(Job.id).label('count')
+    ).filter(
+        Job.date_added >= thirty_days_ago
+    ).group_by(
+        func.date(Job.date_added)
+    ).all()
+    
+    # Format for chart
+    timeline = [{'date': str(item.date), 'count': item.count} for item in timeline_data]
+    
+    return jsonify({'timeline': timeline})
+
+@app.route('/api/analytics/companies')
+def analytics_companies():
+    """Get company analytics data"""
+    company_stats = db.session.query(
+        Job.company,
+        func.count(Job.id).label('total_jobs'),
+        func.sum(func.case([(Job.status == 'applied', 1)], else_=0)).label('applied'),
+        func.sum(func.case([(Job.status == 'interview', 1)], else_=0)).label('interview'),
+        func.sum(func.case([(Job.status == 'offered', 1)], else_=0)).label('offered')
+    ).filter(
+        Job.company.isnot(None),
+        Job.company != ''
+    ).group_by(
+        Job.company
+    ).having(
+        func.count(Job.id) > 0
+    ).order_by(
+        func.count(Job.id).desc()
+    ).limit(10).all()
+    
+    companies = []
+    for stat in company_stats:
+        success_rate = (stat.offered / stat.applied * 100) if stat.applied > 0 else 0
+        companies.append({
+            'company': stat.company,
+            'total_jobs': stat.total_jobs,
+            'applied': stat.applied,
+            'interview': stat.interview,
+            'offered': stat.offered,
+            'success_rate': round(success_rate, 1)
+        })
+    
+    return jsonify({'companies': companies})
+
+@app.route('/api/analytics/locations')
+def analytics_locations():
+    """Get location analytics data"""
+    location_stats = db.session.query(
+        Job.location,
+        func.count(Job.id).label('total_jobs'),
+        func.sum(func.case([(Job.status == 'applied', 1)], else_=0)).label('applied'),
+        func.sum(func.case([(Job.status == 'offered', 1)], else_=0)).label('offered')
+    ).filter(
+        Job.location.isnot(None),
+        Job.location != ''
+    ).group_by(
+        Job.location
+    ).having(
+        func.count(Job.id) > 0
+    ).order_by(
+        func.count(Job.id).desc()
+    ).limit(10).all()
+    
+    locations = []
+    for stat in location_stats:
+        success_rate = (stat.offered / stat.applied * 100) if stat.applied > 0 else 0
+        locations.append({
+            'location': stat.location,
+            'total_jobs': stat.total_jobs,
+            'applied': stat.applied,
+            'offered': stat.offered,
+            'success_rate': round(success_rate, 1)
+        })
+    
+    return jsonify({'locations': locations})
+
+@app.route('/api/search/jobs')
+def search_jobs():
+    """Search and filter jobs with various criteria"""
+    search_text = request.args.get('q', '')
+    status_filter = request.args.get('status', '')
+    location_filter = request.args.get('location', '')
+    sort_by = request.args.get('sort', 'date_desc')
+    
+    # Build query
+    query = Job.query
+    
+    # Apply text search
+    if search_text:
+        search_term = f"%{search_text}%"
+        query = query.filter(
+            db.or_(
+                Job.title.ilike(search_term),
+                Job.company.ilike(search_term),
+                Job.description.ilike(search_term),
+                Job.location.ilike(search_term)
+            )
+        )
+    
+    # Apply status filter
+    if status_filter:
+        query = query.filter(Job.status == status_filter)
+    
+    # Apply location filter
+    if location_filter:
+        query = query.filter(Job.location.ilike(f"%{location_filter}%"))
+    
+    # Apply sorting
+    if sort_by == 'date_desc':
+        query = query.order_by(Job.date_added.desc())
+    elif sort_by == 'date_asc':
+        query = query.order_by(Job.date_added.asc())
+    elif sort_by == 'company_asc':
+        query = query.order_by(Job.company.asc())
+    elif sort_by == 'company_desc':
+        query = query.order_by(Job.company.desc())
+    elif sort_by == 'title_asc':
+        query = query.order_by(Job.title.asc())
+    elif sort_by == 'title_desc':
+        query = query.order_by(Job.title.desc())
+    
+    jobs = query.all()
+    
+    # Convert to JSON
+    jobs_data = []
+    for job in jobs:
+        jobs_data.append({
+            'id': job.id,
+            'title': job.title or 'Untitled Job',
+            'company': job.company or 'Unknown Company',
+            'location': job.location or '',
+            'status': job.status,
+            'date_added': job.date_added.strftime('%m/%d/%Y'),
+            'date_applied': job.date_applied.strftime('%m/%d/%Y') if job.date_applied else None,
+            'url': job.url,
+            'salary_range': job.salary_range or '',
+            'description': job.description or ''
+        })
+    
+    return jsonify({
+        'success': True,
+        'jobs': jobs_data,
+        'total': len(jobs_data)
+    })
+
+@app.route('/api/search/locations')
+def get_locations():
+    """Get unique locations for filter dropdown"""
+    locations = db.session.query(Job.location).filter(
+        Job.location.isnot(None),
+        Job.location != ''
+    ).distinct().all()
+    
+    location_list = [loc[0] for loc in locations if loc[0]]
+    location_list.sort()
+    
+    return jsonify({'locations': location_list})
 
 if __name__ == '__main__':
     with app.app_context():

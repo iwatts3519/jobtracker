@@ -5,8 +5,69 @@
 {% block content %}
 <div class="row mb-4">
     <div class="col-12">
-        <h1>Job Search Dashboard</h1>
-        <p class="text-muted">Organize your job applications with drag and drop</p>
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1>Job Search Dashboard</h1>
+                <p class="text-muted">Organize your job applications with drag and drop</p>
+            </div>
+            <div>
+                <button class="btn btn-outline-primary" data-bs-toggle="collapse" data-bs-target="#searchFilters">
+                    <i class="fas fa-filter me-2"></i>Filter & Search
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filter Panel -->
+<div class="collapse mb-4" id="searchFilters">
+    <div class="card">
+        <div class="card-header">
+            <h5><i class="fas fa-search me-2"></i>Search & Filter Jobs</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <label for="searchText" class="form-label">Search</label>
+                    <input type="text" class="form-control" id="searchText" placeholder="Search titles, companies, descriptions...">
+                </div>
+                <div class="col-md-2">
+                    <label for="filterStatus" class="form-label">Status</label>
+                    <select class="form-select" id="filterStatus">
+                        <option value="">All Statuses</option>
+                        <option value="saved">Saved</option>
+                        <option value="applied">Applied</option>
+                        <option value="interview">Interview</option>
+                        <option value="offered">Offered</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="filterLocation" class="form-label">Location</label>
+                    <select class="form-select" id="filterLocation">
+                        <option value="">All Locations</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label for="sortBy" class="form-label">Sort By</label>
+                    <select class="form-select" id="sortBy">
+                        <option value="date_desc">Date Added (Newest)</option>
+                        <option value="date_asc">Date Added (Oldest)</option>
+                        <option value="company_asc">Company (A-Z)</option>
+                        <option value="company_desc">Company (Z-A)</option>
+                        <option value="title_asc">Job Title (A-Z)</option>
+                        <option value="title_desc">Job Title (Z-A)</option>
+                    </select>
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button class="btn btn-primary me-2" onclick="applyFilters()">
+                        <i class="fas fa-search"></i> Apply
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="clearFilters()">
+                        <i class="fas fa-times"></i> Clear
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -159,4 +220,160 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/kanban.js') }}"></script>
+<script>
+// Search and Filter functionality
+let allJobs = [];
+let filteredJobs = [];
+
+$(document).ready(function() {
+    loadLocations();
+    
+    // Enable Enter key for search
+    $('#searchText').keypress(function(e) {
+        if (e.which == 13) {
+            applyFilters();
+        }
+    });
+    
+    // Auto-search with debounce
+    let searchTimeout;
+    $('#searchText').on('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function() {
+            applyFilters();
+        }, 500);
+    });
+});
+
+function loadLocations() {
+    $.ajax({
+        url: '/api/search/locations',
+        method: 'GET',
+        success: function(data) {
+            const select = $('#filterLocation');
+            data.locations.forEach(function(location) {
+                select.append(`<option value="${location}">${location}</option>`);
+            });
+        },
+        error: function() {
+            console.error('Failed to load locations');
+        }
+    });
+}
+
+function applyFilters() {
+    const searchText = $('#searchText').val();
+    const status = $('#filterStatus').val();
+    const location = $('#filterLocation').val();
+    const sortBy = $('#sortBy').val();
+    
+    const params = new URLSearchParams({
+        q: searchText,
+        status: status,
+        location: location,
+        sort: sortBy
+    });
+    
+    $.ajax({
+        url: '/api/search/jobs?' + params.toString(),
+        method: 'GET',
+        success: function(data) {
+            if (data.success) {
+                updateKanbanBoard(data.jobs);
+                updateJobCounts(data.jobs);
+            }
+        },
+        error: function() {
+            console.error('Failed to search jobs');
+            alert('Search failed. Please try again.');
+        }
+    });
+}
+
+function clearFilters() {
+    $('#searchText').val('');
+    $('#filterStatus').val('');
+    $('#filterLocation').val('');
+    $('#sortBy').val('date_desc');
+    
+    // Reload original data
+    location.reload();
+}
+
+function updateKanbanBoard(jobs) {
+    // Clear all columns
+    $('#saved-jobs, #applied-jobs, #interview-jobs, #offered-jobs').empty();
+    
+    // Group jobs by status
+    const jobsByStatus = {
+        saved: jobs.filter(job => job.status === 'saved'),
+        applied: jobs.filter(job => job.status === 'applied'),
+        interview: jobs.filter(job => job.status === 'interview'),
+        offered: jobs.filter(job => job.status === 'offered')
+    };
+    
+    // Render jobs in each column
+    Object.keys(jobsByStatus).forEach(status => {
+        const container = $(`#${status}-jobs`);
+        const statusJobs = jobsByStatus[status];
+        
+        statusJobs.forEach(job => {
+            const jobCard = createJobCard(job);
+            container.append(jobCard);
+        });
+    });
+    
+    // Reinitialize drag and drop
+    if (typeof initializeKanban === 'function') {
+        initializeKanban();
+    }
+}
+
+function createJobCard(job) {
+    const dateDisplay = job.status === 'applied' && job.date_applied 
+        ? job.date_applied 
+        : job.date_added;
+    
+    return `
+        <div class="job-card" data-job-id="${job.id}">
+            <div class="card mb-2">
+                <div class="card-body">
+                    <h6 class="card-title">${job.title}</h6>
+                    <p class="card-text">
+                        <strong>${job.company}</strong><br>
+                        ${job.location ? `<small class="text-muted">${job.location}</small>` : ''}
+                        ${job.salary_range ? `<br><small class="text-success">${job.salary_range}</small>` : ''}
+                    </p>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">${dateDisplay}</small>
+                        <div class="btn-group" role="group">
+                            <a href="/job/${job.id}" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <button class="btn btn-sm btn-outline-danger delete-job" data-job-id="${job.id}">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function updateJobCounts(jobs) {
+    const counts = {
+        saved: jobs.filter(job => job.status === 'saved').length,
+        applied: jobs.filter(job => job.status === 'applied').length,
+        interview: jobs.filter(job => job.status === 'interview').length,
+        offered: jobs.filter(job => job.status === 'offered').length
+    };
+    
+    // Update header counts
+    $('.kanban-column[data-status="saved"] h5').html(`<i class="fas fa-bookmark me-2"></i>Saved (${counts.saved})`);
+    $('.kanban-column[data-status="applied"] h5').html(`<i class="fas fa-paper-plane me-2"></i>Applied (${counts.applied})`);
+    $('.kanban-column[data-status="interview"] h5').html(`<i class="fas fa-handshake me-2"></i>Interview (${counts.interview})`);
+    $('.kanban-column[data-status="offered"] h5').html(`<i class="fas fa-trophy me-2"></i>Offered (${counts.offered})`);
+}
+</script>
 {% endblock %}

@@ -9,6 +9,7 @@
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/jquery-ui.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
@@ -18,6 +19,7 @@
             </a>
             <div class="navbar-nav ms-auto">
                 <a class="nav-link" href="{{ url_for('index') }}">Dashboard</a>
+                <a class="nav-link" href="{{ url_for('analytics') }}">Analytics</a>
                 <a class="nav-link" href="{{ url_for('add_job') }}">Add Job</a>
                 <a class="nav-link" href="{{ url_for('job_search') }}">Search Jobs</a>
                 <a class="nav-link" href="{{ url_for('cv_customizer') }}">CV Customizer</a>
