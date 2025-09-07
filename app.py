@@ -443,7 +443,7 @@ def analytics_locations():
     return jsonify({'locations': locations})
 
 @app.route('/api/search/jobs')
-def search_jobs():
+def api_search_jobs():
     """Search and filter jobs with various criteria"""
     search_text = request.args.get('q', '')
     status_filter = request.args.get('status', '')
