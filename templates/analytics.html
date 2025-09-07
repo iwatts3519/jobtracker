@@ -1,0 +1,356 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics - Job Tracker{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1><i class="fas fa-chart-bar me-3"></i>Job Search Analytics</h1>
+            <small class="text-muted">Track your job search progress and success rates</small>
+        </div>
+    </div>
+</div>
+
+<!-- Overview Stats -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title" id="totalJobs">-</h4>
+                        <p class="card-text">Total Jobs</p>
+                    </div>
+                    <i class="fas fa-briefcase fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title" id="successRate">-%</h4>
+                        <p class="card-text">Success Rate</p>
+                    </div>
+                    <i class="fas fa-trophy fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title" id="interviewRate">-%</h4>
+                        <p class="card-text">Interview Rate</p>
+                    </div>
+                    <i class="fas fa-handshake fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="card-title" id="appliedJobs">-</h4>
+                        <p class="card-text">Applications</p>
+                    </div>
+                    <i class="fas fa-paper-plane fa-2x opacity-75"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Status Distribution Chart -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-pie me-2"></i>Job Status Distribution</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="statusChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeline Chart -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-line me-2"></i>Application Timeline (30 Days)</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="timelineChart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Top Companies -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-building me-2"></i>Top Companies</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Company</th>
+                                <th>Jobs</th>
+                                <th>Applied</th>
+                                <th>Success Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody id="companiesTable">
+                            <tr><td colspan="4" class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Locations -->
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-map-marker-alt me-2"></i>Top Locations</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Location</th>
+                                <th>Jobs</th>
+                                <th>Applied</th>
+                                <th>Success Rate</th>
+                            </tr>
+                        </thead>
+                        <tbody id="locationsTable">
+                            <tr><td colspan="4" class="text-center"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let statusChart, timelineChart;
+
+$(document).ready(function() {
+    loadAnalytics();
+});
+
+function loadAnalytics() {
+    // Load overview data
+    $.ajax({
+        url: '/api/analytics/overview',
+        method: 'GET',
+        success: function(data) {
+            $('#totalJobs').text(data.total_jobs);
+            $('#successRate').text(data.success_rate + '%');
+            $('#interviewRate').text(data.interview_rate + '%');
+            $('#appliedJobs').text(data.status_counts.applied);
+            
+            // Create status chart
+            createStatusChart(data.status_counts);
+        },
+        error: function() {
+            console.error('Failed to load overview analytics');
+        }
+    });
+    
+    // Load timeline data
+    $.ajax({
+        url: '/api/analytics/timeline',
+        method: 'GET',
+        success: function(data) {
+            createTimelineChart(data.timeline);
+        },
+        error: function() {
+            console.error('Failed to load timeline analytics');
+        }
+    });
+    
+    // Load companies data
+    $.ajax({
+        url: '/api/analytics/companies',
+        method: 'GET',
+        success: function(data) {
+            populateCompaniesTable(data.companies);
+        },
+        error: function() {
+            console.error('Failed to load companies analytics');
+        }
+    });
+    
+    // Load locations data
+    $.ajax({
+        url: '/api/analytics/locations',
+        method: 'GET',
+        success: function(data) {
+            populateLocationsTable(data.locations);
+        },
+        error: function() {
+            console.error('Failed to load locations analytics');
+        }
+    });
+}
+
+function createStatusChart(statusCounts) {
+    const ctx = document.getElementById('statusChart').getContext('2d');
+    
+    if (statusChart) {
+        statusChart.destroy();
+    }
+    
+    statusChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Saved', 'Applied', 'Interview', 'Offered'],
+            datasets: [{
+                data: [statusCounts.saved, statusCounts.applied, statusCounts.interview, statusCounts.offered],
+                backgroundColor: ['#6c757d', '#ffc107', '#17a2b8', '#28a745'],
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+function createTimelineChart(timelineData) {
+    const ctx = document.getElementById('timelineChart').getContext('2d');
+    
+    if (timelineChart) {
+        timelineChart.destroy();
+    }
+    
+    // Prepare data - fill in missing dates with 0
+    const last30Days = [];
+    const today = new Date();
+    for (let i = 29; i >= 0; i--) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        const dateStr = date.toISOString().split('T')[0];
+        
+        const dataPoint = timelineData.find(item => item.date === dateStr);
+        last30Days.push({
+            date: dateStr,
+            count: dataPoint ? dataPoint.count : 0
+        });
+    }
+    
+    timelineChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: last30Days.map(item => new Date(item.date).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})),
+            datasets: [{
+                label: 'Jobs Added',
+                data: last30Days.map(item => item.count),
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+}
+
+function populateCompaniesTable(companies) {
+    const tbody = $('#companiesTable');
+    tbody.empty();
+    
+    if (companies.length === 0) {
+        tbody.append('<tr><td colspan="4" class="text-center text-muted">No company data available</td></tr>');
+        return;
+    }
+    
+    companies.forEach(function(company) {
+        const row = `
+            <tr>
+                <td><strong>${company.company}</strong></td>
+                <td><span class="badge bg-secondary">${company.total_jobs}</span></td>
+                <td><span class="badge bg-primary">${company.applied}</span></td>
+                <td>
+                    ${company.success_rate > 0 ? 
+                        `<span class="badge bg-success">${company.success_rate}%</span>` : 
+                        '<span class="badge bg-light text-dark">-</span>'
+                    }
+                </td>
+            </tr>
+        `;
+        tbody.append(row);
+    });
+}
+
+function populateLocationsTable(locations) {
+    const tbody = $('#locationsTable');
+    tbody.empty();
+    
+    if (locations.length === 0) {
+        tbody.append('<tr><td colspan="4" class="text-center text-muted">No location data available</td></tr>');
+        return;
+    }
+    
+    locations.forEach(function(location) {
+        const row = `
+            <tr>
+                <td><strong>${location.location}</strong></td>
+                <td><span class="badge bg-secondary">${location.total_jobs}</span></td>
+                <td><span class="badge bg-primary">${location.applied}</span></td>
+                <td>
+                    ${location.success_rate > 0 ? 
+                        `<span class="badge bg-success">${location.success_rate}%</span>` : 
+                        '<span class="badge bg-light text-dark">-</span>'
+                    }
+                </td>
+            </tr>
+        `;
+        tbody.append(row);
+    });
+}
+</script>
+{% endblock %}
